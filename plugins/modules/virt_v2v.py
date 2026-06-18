@@ -20,7 +20,7 @@ description:
   - Connection and target settings can be supplied as flat module options, nested dicts
     (O(vcenter), O(vddk), O(libvirt)), or environment variables on the conversion host.
 author:
-  - Migration automation
+  - Anand Nande (@anande)
 requirements:
   - The below requirements are needed on the host that executes this module (the RHEL KVM conversion host).
   - virt-v2v
@@ -69,7 +69,6 @@ options:
           - VMware password passed to C(virt-v2v -ip).
           - Maps to O(vcenter_password).
         type: str
-        no_log: true
       password_file:
         description:
           - Path to a file containing the VMware password for C(virt-v2v -ip).
@@ -111,7 +110,6 @@ options:
       - Mutually exclusive with O(vcenter_password_file).
       - One of O(vcenter_password) or O(vcenter_password_file) is required when O(state=present).
     type: str
-    no_log: true
   vcenter_password_file:
     description:
       - Path to a file containing the VMware password for C(virt-v2v -ip).
@@ -281,17 +279,22 @@ options:
     default: virt-v2v
 attributes:
   check_mode:
+    description:
+      - Can run in C(check_mode) and return changed status prediction without modifying target.
     support: none
   diff_mode:
+    description:
+      - Will return details on what has changed when run with C(--diff).
     support: none
   platform:
     description:
       - Target OS/families that can be operated against.
+    support: partial
     platforms:
       - Red Hat Enterprise Linux 9
       - Red Hat Enterprise Linux 10
 notes:
-  - This module must run on the RHEL KVM conversion host (typically with C(connection: local)), not on the Ansible control node unless it is also the conversion host.
+  - 'This module must run on the RHEL KVM conversion host (typically with C(connection=local)), not on the Ansible control node unless it is also the conversion host.'
   - Flat module options override nested O(vcenter)/O(vddk)/O(libvirt) dict values.
   - When used with C(loop:), each guest is converted individually. Put shared settings in O(vcenter), O(vddk), and O(libvirt) via C(group_vars) so loop items only carry O(name) and network mappings.
   - O(vcenter_hostname), O(vcenter_username), O(datacenter), and O(compute_path) can also be set with the C(VCENTER_HOSTNAME), C(VCENTER_USERNAME), C(VCENTER_DATACENTER), and C(VCENTER_COMPUTE_PATH) environment variables.
@@ -299,15 +302,10 @@ notes:
   - The source VMware guest must be powered off before conversion. Running C(virt-v2v) against a powered-on guest fails or produces inconsistent results.
   - For RBD-backed libvirt pools on Red Hat Ceph Storage 9, verify pool access with C(virsh pool-info) and C(rbd ls) before running conversions.
   - VDDK transport requires network access from the conversion host to vCenter on TCP 443 and a valid O(vddk_thumbprint).
+  - See U(https://libguestfs.org/virt-v2v.1.html), U(https://access.redhat.com/articles/1353223), and U(https://docs.redhat.com/en/documentation/red_hat_ceph_storage/9) for additional references.
 seealso:
   - module: community.vmware.vmware_guest_powerstate
     description: Power off VMware guests before conversion.
-  - name: virt-v2v man page
-    link: https://libguestfs.org/virt-v2v.1.html
-  - name: Red Hat virt-v2v VMware guide
-    link: https://access.redhat.com/articles/1353223
-  - name: Red Hat Ceph Storage 9 documentation
-    link: https://docs.redhat.com/en/documentation/red_hat_ceph_storage/9
 """
 
 EXAMPLES = r"""
@@ -569,15 +567,14 @@ def _merge_nested_dict(params, nested_key, field_map):
     if not isinstance(nested, dict):
         return nested
     for nested_field, flat_key in field_map.items():
-        if nested.get(nested_field) is not None and params.get(flat_key) is None:
-            params[flat_key] = nested[nested_field]
+        nested_value = nested.get(nested_field)
+        if nested_value is None:
+            continue
+        current = params.get(flat_key)
+        default_value = MODULE_DEFAULTS.get(flat_key)
+        if current is None or (default_value is not None and current == default_value):
+            params[flat_key] = nested_value
     return None
-
-
-def _apply_defaults(params):
-    for key, value in MODULE_DEFAULTS.items():
-        if params.get(key) is None:
-            params[key] = value
 
 
 def _resolve_params(module):
@@ -591,7 +588,6 @@ def _resolve_params(module):
     bad_nested = _merge_nested_dict(params, "libvirt", NESTED_LIBVIRT_MAP)
     if bad_nested is not None:
         module.fail_json(msg="libvirt must be a dictionary")
-    _apply_defaults(params)
 
 
 def _validate_present_params(module):
@@ -845,7 +841,7 @@ def main():
                 type="str",
                 fallback=(env_fallback, ["VCENTER_COMPUTE_PATH"]),
             ),
-            vcenter_verify_ssl=dict(type="bool"),
+            vcenter_verify_ssl=dict(type="bool", default=False),
             vddk=dict(
                 type="dict",
                 options=dict(
@@ -854,7 +850,7 @@ def main():
                     thumbprint=dict(type="str"),
                 ),
             ),
-            input_transport=dict(type="str", choices=["vddk", "vpx"]),
+            input_transport=dict(type="str", default="vddk", choices=["vddk", "vpx"]),
             vddk_libdir=dict(type="path"),
             vddk_thumbprint=dict(type="str"),
             libvirt=dict(
@@ -865,9 +861,9 @@ def main():
                     output_format=dict(type="str", choices=["raw", "qcow2"]),
                 ),
             ),
-            libvirt_uri=dict(type="str"),
-            libvirt_pool=dict(type="str", aliases=["pool"]),
-            output_format=dict(type="str", choices=["raw", "qcow2"]),
+            libvirt_uri=dict(type="str", default="qemu:///system"),
+            libvirt_pool=dict(type="str", default="vms", aliases=["pool"]),
+            output_format=dict(type="str", default="raw", choices=["raw", "qcow2"]),
             networks=dict(type="list", elements="raw", default=[]),
             bridges=dict(type="list", elements="raw", default=[]),
             macs=dict(type="list", elements="raw", default=[]),

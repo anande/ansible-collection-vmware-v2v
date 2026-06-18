@@ -75,17 +75,22 @@ def test_flat_params_override_nested_dict():
     assert params["vcenter_hostname"] == "flat.example.com"
 
 
-def test_apply_defaults():
+def test_merge_nested_overrides_defaults():
     params = {
-        "vcenter_verify_ssl": None,
-        "input_transport": None,
-        "libvirt_uri": None,
-        "libvirt_pool": None,
-        "output_format": None,
+        "libvirt": {"pool": "ceph_vms"},
+        "libvirt_pool": "vms",
     }
-    virt_v2v._apply_defaults(params)
-    assert params["libvirt_pool"] == "vms"
-    assert params["output_format"] == "raw"
+    virt_v2v._merge_nested_dict(params, "libvirt", virt_v2v.NESTED_LIBVIRT_MAP)
+    assert params["libvirt_pool"] == "ceph_vms"
+
+
+def test_merge_nested_does_not_override_explicit_flat_value():
+    params = {
+        "libvirt": {"pool": "ceph_vms"},
+        "libvirt_pool": "custom_pool",
+    }
+    virt_v2v._merge_nested_dict(params, "libvirt", virt_v2v.NESTED_LIBVIRT_MAP)
+    assert params["libvirt_pool"] == "custom_pool"
 
 
 def test_main_skips_existing_domain(mocker):
