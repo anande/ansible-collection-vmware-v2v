@@ -7,7 +7,6 @@ authors:
 description: Convert VMware guests to KVM using virt-v2v on RHEL with Ceph RBD-backed libvirt pools
 license:
   - GPL-3.0-or-later
-license_file: LICENSE
 tags:
   - migration
   - vmware
