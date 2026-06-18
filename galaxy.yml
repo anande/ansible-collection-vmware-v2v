@@ -1,0 +1,23 @@
+namespace: anande
+name: vmware_v2v
+version: 1.0.0
+readme: README.md
+authors:
+  - Anand Nande (@anande)
+description: Convert VMware guests to KVM using virt-v2v on RHEL with Ceph RBD-backed libvirt pools
+license:
+  - GPL-3.0-or-later
+license_file: LICENSE
+tags:
+  - migration
+  - vmware
+  - kvm
+  - virt_v2v
+  - libvirt
+  - ceph
+repository: https://github.com/anande/ansible-collection-vmware-v2v
+documentation: https://github.com/anande/ansible-collection-vmware-v2v/blob/main/README.md
+homepage: https://github.com/anande/ansible-collection-vmware-v2v
+issues: https://github.com/anande/ansible-collection-vmware-v2v/issues
+dependencies:
+  community.vmware: ">=1.0.0"

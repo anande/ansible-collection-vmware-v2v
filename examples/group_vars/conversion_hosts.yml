@@ -1,0 +1,31 @@
+---
+# Shared settings for VMware -> RHEL KVM conversion hosts.
+# Copy or symlink into your playbook's group_vars/conversion_hosts.yml.
+
+vcenter:
+  hostname: vcenter.example.com
+  username: "VCENTER.LOCAL\\migration"
+  password: "{{ vault_vcenter_password }}"
+  datacenter: Datacenter
+  compute_path: Cluster1/esxi-01.example.com
+
+vddk:
+  libdir: /usr/lib/vmware-vix-disklib
+  thumbprint: "{{ vcenter_thumbprint }}"
+
+libvirt:
+  uri: qemu:///system
+  pool: vms
+  output_format: raw
+
+migration_vms:
+  - name: app-server-01
+    networks:
+      - src: "VM Network"
+        dest: br-tenant
+  - name: db-server-01
+    networks:
+      - src: "VM Network"
+        dest: br-tenant
+      - src: "Management"
+        dest: br-mgmt

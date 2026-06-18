@@ -1,0 +1,6 @@
+---
+requires_ansible: '>=2.19.0'
+
+action_groups:
+  vmware_v2v:
+    - virt_v2v

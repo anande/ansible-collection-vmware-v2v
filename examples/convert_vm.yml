@@ -1,0 +1,67 @@
+---
+# Example playbook: VMware -> RHEL KVM on Red Hat Ceph 9 RBD
+#
+# Install the collection from the repo root:
+#   ansible-galaxy collection install -p ./collections .
+#
+# Run on the conversion host (needs virt-v2v, VDDK, libvirt RBD pool "vms"):
+#   ansible-playbook -i conversion_host, -c local examples/convert_vm.yml \
+#     -e @examples/vars/secrets.yml.example
+
+- name: Convert VMware guests to libvirt on Ceph RBD
+  hosts: conversion_hosts
+  gather_facts: false
+
+  # Alternatively, place these in group_vars/conversion_hosts.yml — see examples/group_vars/
+  vars:
+    vcenter:
+      hostname: vcenter.example.com
+      username: "VCENTER.LOCAL\\migration"
+      password: "{{ vault_vcenter_password }}"
+      datacenter: Datacenter
+      compute_path: Cluster1/esxi-01.example.com
+    vddk:
+      libdir: /usr/lib/vmware-vix-disklib
+      thumbprint: "{{ vcenter_thumbprint }}"
+    libvirt:
+      pool: vms
+      output_format: raw
+    migration_vms:
+      - name: app-server-01
+        networks:
+          - src: "VM Network"
+            dest: br-tenant
+      - name: db-server-01
+        networks:
+          - src: "VM Network"
+            dest: br-tenant
+          - src: "Management"
+            dest: br-mgmt
+
+  tasks:
+    - name: Ensure guest is powered off before conversion
+      community.vmware.vmware_guest_powerstate:
+        hostname: "{{ vcenter.hostname }}"
+        username: "{{ vcenter.username }}"
+        password: "{{ vault_vcenter_password }}"
+        validate_certs: false
+        name: "{{ item.name }}"
+        state: powered-off
+      loop: "{{ migration_vms }}"
+      delegate_to: localhost
+      vars:
+        ansible_python_interpreter: "{{ ansible_playbook_python }}"
+
+    - name: Convert guest with virt_v2v module (shared settings from vcenter/vddk/libvirt vars)
+      anande.vmware_v2v.virt_v2v:
+        name: "{{ item.name }}"
+        networks: "{{ item.networks }}"
+      loop: "{{ migration_vms }}"
+      register: v2v_results
+
+    - name: Show conversion summary
+      ansible.builtin.debug:
+        msg: "Converted {{ item.item.name }} changed={{ item.changed }} skipped={{ item.skipped | default(false) }}"
+      loop: "{{ v2v_results.results }}"
+      loop_control:
+        label: "{{ item.item.name }}"

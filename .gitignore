@@ -1,0 +1,11 @@
+collections/
+*.pyc
+__pycache__/
+.DS_Store
+*.tar.gz
+.ansible/
+.pytest_cache/
+.coverage
+htmlcov/
+test/results/
+tests/output/

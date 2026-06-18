@@ -1,0 +1,11 @@
+---
+ancestor: null
+releases:
+  1.0.0:
+    release_date: '2026-06-18'
+    changes:
+      release_summary: Initial release of the anande.vmware_v2v collection.
+      major_changes:
+        - Add C(virt_v2v) module to convert powered-off VMware guests to libvirt-managed KVM using C(virt-v2v).
+        - Support nested O(vcenter), O(vddk), and O(libvirt) dicts, parameter aliases, and environment variable fallbacks for batch migrations.
+        - Target RHEL KVM conversion hosts with Red Hat Ceph RBD-backed libvirt storage pools.
