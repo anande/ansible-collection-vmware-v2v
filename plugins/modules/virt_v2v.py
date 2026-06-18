@@ -294,15 +294,26 @@ attributes:
       - Red Hat Enterprise Linux 9
       - Red Hat Enterprise Linux 10
 notes:
-  - 'This module must run on the RHEL KVM conversion host (typically with C(connection=local)), not on the Ansible control node unless it is also the conversion host.'
+  - >-
+    This module must run on the RHEL KVM conversion host (typically with C(connection=local)),
+    not on the Ansible control node unless it is also the conversion host.
   - Flat module options override nested O(vcenter)/O(vddk)/O(libvirt) dict values.
-  - When used with C(loop:), each guest is converted individually. Put shared settings in O(vcenter), O(vddk), and O(libvirt) via C(group_vars) so loop items only carry O(name) and network mappings.
-  - O(vcenter_hostname), O(vcenter_username), O(datacenter), and O(compute_path) can also be set with the C(VCENTER_HOSTNAME), C(VCENTER_USERNAME), C(VCENTER_DATACENTER), and C(VCENTER_COMPUTE_PATH) environment variables.
-  - O(vcenter_password) and O(vcenter_password_file) can be set with C(VCENTER_PASSWORD) and C(VCENTER_PASSWORD_FILE) respectively.
+  - When used with C(loop:), each guest is converted individually.
+  - >-
+    Put shared settings in O(vcenter), O(vddk), and O(libvirt) via C(group_vars) so loop items
+    only carry O(name) and network mappings.
+  - >-
+    O(vcenter_hostname), O(vcenter_username), O(datacenter), and O(compute_path) can also be set
+    with the C(VCENTER_HOSTNAME), C(VCENTER_USERNAME), C(VCENTER_DATACENTER), and
+    C(VCENTER_COMPUTE_PATH) environment variables.
+  - >-
+    O(vcenter_password) and O(vcenter_password_file) can be set with C(VCENTER_PASSWORD) and
+    C(VCENTER_PASSWORD_FILE) respectively.
   - The source VMware guest must be powered off before conversion. Running C(virt-v2v) against a powered-on guest fails or produces inconsistent results.
   - For RBD-backed libvirt pools on Red Hat Ceph Storage 9, verify pool access with C(virsh pool-info) and C(rbd ls) before running conversions.
   - VDDK transport requires network access from the conversion host to vCenter on TCP 443 and a valid O(vddk_thumbprint).
-  - See U(https://libguestfs.org/virt-v2v.1.html), U(https://access.redhat.com/articles/1353223), and U(https://docs.redhat.com/en/documentation/red_hat_ceph_storage/9) for additional references.
+  - See U(https://libguestfs.org/virt-v2v.1.html) and U(https://access.redhat.com/articles/1353223) for virt-v2v references.
+  - See U(https://docs.redhat.com/en/documentation/red_hat_ceph_storage/9) for Red Hat Ceph Storage 9 documentation.
 seealso:
   - module: community.vmware.vmware_guest_powerstate
     description: Power off VMware guests before conversion.
@@ -648,7 +659,7 @@ def _virt_v2v_present(module):
     if not shutil.which("virsh"):
         module.fail_json(msg="virsh not found in PATH")
 
-    rc, _, _ = module.run_command(["virsh", "-c", uri, "dominfo", name], check_rc=False)
+    rc, dominfo_out, dominfo_err = module.run_command(["virsh", "-c", uri, "dominfo", name], check_rc=False)
     if rc == 0 and not module.params["force"]:
         return {
             "changed": False,
@@ -745,7 +756,7 @@ def _virt_v2v_present(module):
             domain=name,
         )
 
-    rc, _, stderr = module.run_command(["virsh", "-c", uri, "dominfo", name], check_rc=False)
+    rc, dominfo_out, stderr = module.run_command(["virsh", "-c", uri, "dominfo", name], check_rc=False)
     if rc != 0:
         module.fail_json(
             msg="virt-v2v completed but libvirt domain was not found",
@@ -772,7 +783,7 @@ def _virt_v2v_absent(module):
     if not shutil.which("virsh"):
         module.fail_json(msg="virsh not found in PATH")
 
-    rc, _, _ = module.run_command(["virsh", "-c", uri, "dominfo", name], check_rc=False)
+    rc, dominfo_out, dominfo_err = module.run_command(["virsh", "-c", uri, "dominfo", name], check_rc=False)
     if rc != 0:
         return {"changed": False, "domain": name, "msg": "libvirt domain does not exist"}
 
